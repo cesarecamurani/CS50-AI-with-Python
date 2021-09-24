@@ -106,8 +106,6 @@ class CrosswordCreator():
                 if len(var) != variable.length:
                     self.domains[variable].remove(var)
 
-        # pdb.set_trace()
-
     def revise(self, x, y):
         """
         Make variable `x` arc consistent with variable `y`.
@@ -207,29 +205,28 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        # unassigned_neighboring_vars = self.crossword.neighbors(var) - set(assignment.keys())
-        # pdb.set_trace()
-        unassigned_vars = self.crossword.neighbors(var)
+        unassigned_vars = self.crossword.neighbors(var) - set(assignment.keys())
 
         overlaps = self.overlaps()
 
         ruled_out_values = dict()
 
-        for un_var in unassigned_vars:
-            x_index = overlaps[var, un_var][0]
-            y_index = overlaps[var, un_var][1]
+        for value_x in self.domains[var]:
+            ruled_out_values_count = 0
 
-            for value_x in self.domains[var]:
-                ruled_out_values_count = 0
+            for un_var in unassigned_vars:
+                x_index = overlaps[var, un_var][0]
+                y_index = overlaps[var, un_var][1]
 
                 for value_y in self.domains[un_var]:
                     if value_x[x_index] != value_y[y_index]:
                         ruled_out_values_count += 1
 
-                ruled_out_values[value_x] = ruled_out_values_count
+            ruled_out_values[value_x] = ruled_out_values_count
 
-        pdb.set_trace()
-        return ruled_out_values
+        sorted_values = sort(ruled_out_values)
+        # pdb.set_trace()
+        return sorted_values
 
     def select_unassigned_variable(self, assignment):
         """
@@ -239,7 +236,24 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
-        raise NotImplementedError
+        variables = self.crossword.variables - set(assignment.keys())
+
+        mrvs = {var: len(self.domains[var]) for var in variables}
+
+        min_value = min(mrvs.values())
+        mrv_vars = list(filter(lambda x: mrvs[x] == min_value, mrvs))
+
+        if len(mrv_vars) == 1:
+            variable = mrv_vars[0]
+        else:
+            degrees = {var: len(self.crossword.neighbors(var)) for var in mrv_vars}
+            max_value = max(degrees.values())
+            degree_vars = list(filter(lambda x: degrees[x] == max_value, degrees))
+            variable = degree_vars[0]
+
+        # pdb.set_trace()
+
+        return variable
 
     def backtrack(self, assignment):
         """
@@ -253,13 +267,30 @@ class CrosswordCreator():
         if self.assignment_complete(assignment):
             return assignment
 
-        # self.order_domain_values(Variable(0, 6, 'down', 6), None)
-        self.order_domain_values(Variable(1, 7, 'down', 7), None)
+        var = self.select_unassigned_variable(assignment)
+
+        for value in self.order_domain_values(var, assignment):
+            if self.consistent(assignment):
+                assignment[var] = value
+                result = self.backtrack(assignment)
+
+                if result is not None:
+                    return result
+
+                del assignment[var]
+
+        return None
 
     def overlaps(self):
         overlaps = {key: val for key, val in self.crossword.overlaps.items() if val is not None}
 
         return overlaps
+
+
+def sort(dictionary, reverse=False):
+    sorted_dict = dict(sorted(dictionary.items(), key=lambda item: item[1], reverse=reverse))
+
+    return sorted_dict
 
 
 def main():
