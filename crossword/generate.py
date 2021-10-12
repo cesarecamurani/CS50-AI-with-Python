@@ -1,5 +1,4 @@
 import collections
-import pdb
 import sys
 
 from crossword import *
@@ -101,10 +100,12 @@ class CrosswordCreator():
         (Remove any values that are inconsistent with a variable's unary
          constraints; in this case, the length of the word.)
         """
-        for variable, variables in self.domains.items():
-            for var in variables.copy():
-                if len(var) != variable.length:
-                    self.domains[variable].remove(var)
+        for variable, values in self.domains.items():
+            for value in values.copy():
+                # If a value doesn't satisfy the length unary constraint,
+                # it'll be removed from the variable domain.
+                if len(value) != variable.length:
+                    self.domains[variable].remove(value)
 
     def revise(self, x, y):
         """
@@ -119,14 +120,18 @@ class CrosswordCreator():
         overlaps = self.overlaps()
 
         for value_x in self.domains[x].copy():
+            # We find the indexes for the overlapping characters' positions.
             x_index = overlaps[x, y][0]
             y_index = overlaps[x, y][1]
             matches = 0
 
             for value_y in self.domains[y]:
+                # If the characters in the overlapping positions given by the indexes match,
+                # we increase the matches by 1.
                 if value_x[x_index] == value_y[y_index]:
                     matches += 1
-
+            # If there are no matches at all for that value_x in y domain,
+            # we remove the value from x domain and we set revised to true.
             if matches == 0:
                 self.domains[x].remove(value_x)
                 revised = True
@@ -142,17 +147,21 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
-        all_arcs = arcs if arcs is not None else self.overlaps()
-
-        queue = list(all_arcs)
+        # We set the queue to the arcs if arcs is passed,
+        # otherwise we set it to a list of all overlaps.
+        queue = arcs if arcs is not None else list(self.overlaps())
 
         while len(queue) != 0:
+            # Until the queue is not empty, we keep extracting a pair of
+            # variables from it.
             x, y = queue.pop()
 
             if self.revise(x, y):
+                # If, after revising the pair, the domain of x is empty, we return False
                 if len(self.domains[x]) == 0:
                     return False
-
+                # We add to the queue all the pairs made by x and its neighbours,
+                # except for the one already examined.
                 for nb in self.crossword.neighbors(x) - {y}:
                     queue.append((nb, x))
 
@@ -163,7 +172,9 @@ class CrosswordCreator():
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
-        completed = (self.crossword.variables == assignment.keys()) and all(assignment.values())
+        # Returns True if all the assignment keys match the variables and
+        # the values are not None or empty strings.
+        completed = (self.crossword.variables == assignment.keys() and all(assignment.values()))
 
         return completed
 
@@ -175,10 +186,10 @@ class CrosswordCreator():
         overlaps = self.overlaps()
         var_occurrences = dict(collections.Counter(assignment.values()))
         no_conflicts = list()
-
+        # Checks if any of the assigned values' length is different from the variable's length.
         if any(len(assignment[var]) != var.length for var in assignment):
             return False
-
+        # Checks for values that have been assigned more than once.
         if any(occ > 1 for occ in var_occurrences.values()):
             return False
 
@@ -187,12 +198,12 @@ class CrosswordCreator():
                 if nb in assignment:
                     var_index = overlaps[var, nb][0]
                     nb_index = overlaps[var, nb][1]
-
+                    # Checks for conflicting overlapping values.
                     if assignment[var][var_index] == assignment[nb][nb_index]:
                         no_conflicts.append(True)
                     else:
                         no_conflicts.append(False)
-        
+        # Returns false if there are conflicts.
         if not all(no_conflicts):
             return False
 
@@ -210,22 +221,24 @@ class CrosswordCreator():
         overlaps = self.overlaps()
 
         ruled_out_values = dict()
-
+        # For each value in the variable domain,
         for value_x in self.domains[var]:
             ruled_out_values_count = 0
-
+            # we find the unassigned neighbouring variables and their overlapping values.
             for un_var in unassigned_vars:
                 x_index = overlaps[var, un_var][0]
                 y_index = overlaps[var, un_var][1]
 
                 for value_y in self.domains[un_var]:
+                    # If the characters in the overlapping positions given by the indexes don't match,
+                    # we increase the ruled_out_values_count by 1.
                     if value_x[x_index] != value_y[y_index]:
                         ruled_out_values_count += 1
-
+            # Finally, we assign to each value its corresponding ruled_out_values_count
             ruled_out_values[value_x] = ruled_out_values_count
-
+        # and we sort the value in ascending order (using the sort() method defined below).
         sorted_values = sort(ruled_out_values)
-        # pdb.set_trace()
+
         return sorted_values
 
     def select_unassigned_variable(self, assignment):
@@ -237,12 +250,18 @@ class CrosswordCreator():
         return values.
         """
         variables = self.crossword.variables - set(assignment.keys())
-
+        # We assign to each remaining variable the count of the values still in its domain.
         mrvs = {var: len(self.domains[var]) for var in variables}
-
+        # We find the minimum value between all the variables' values count.
         min_value = min(mrvs.values())
+        # We find the one (or ones) whose value correspond to the min value.
         mrv_vars = list(filter(lambda x: mrvs[x] == min_value, mrvs))
-
+        # If there's only one variable in the resulting list, we return it,
+        # otherwise we assign to each variable's neighbour in mrv_vars the count of the values in its domain,
+        # we find the maximum value between all the neighbour' values count,
+        # and we find the one (or ones) whose value correspond to the max value.
+        # If it's still a tie, we just return the first one.
+        # (as "any of the tied variables are acceptable return values").
         if len(mrv_vars) == 1:
             variable = mrv_vars[0]
         else:
@@ -250,8 +269,6 @@ class CrosswordCreator():
             max_value = max(degrees.values())
             degree_vars = list(filter(lambda x: degrees[x] == max_value, degrees))
             variable = degree_vars[0]
-
-        # pdb.set_trace()
 
         return variable
 
@@ -266,29 +283,37 @@ class CrosswordCreator():
         """
         if self.assignment_complete(assignment):
             return assignment
-
+        # Finds an unassigned variable.
         var = self.select_unassigned_variable(assignment)
+        # Sets the arcs for the AC-3 function.
+        arcs = [(neighbor, var) for neighbor in self.crossword.neighbors(var)]
 
         for value in self.order_domain_values(var, assignment):
+            assignment[var] = value
+            # For each value in the ordered domain values, we check overall consistency
+            # and arc consistency after adding a variable to the assignment.
             if self.consistent(assignment):
-                assignment[var] = value
-                result = self.backtrack(assignment)
+                if self.ac3(arcs):
+                    # If checks are successful, we recursively call the backtrack function,
+                    result = self.backtrack(assignment)
+                    # and if the result is not none, we return it (the completed assignment).
+                    if result is not None:
+                        return result
 
-                if result is not None:
-                    return result
-
-                del assignment[var]
+                    del assignment[var]
 
         return None
 
+    # Removes all the overlaps pairs whose value is None.
     def overlaps(self):
         overlaps = {key: val for key, val in self.crossword.overlaps.items() if val is not None}
 
         return overlaps
 
 
-def sort(dictionary, reverse=False):
-    sorted_dict = dict(sorted(dictionary.items(), key=lambda item: item[1], reverse=reverse))
+# Returns a sorted dictionary.
+def sort(dictionary):
+    sorted_dict = dict(sorted(dictionary.items(), key=lambda item: item[1]))
 
     return sorted_dict
 
