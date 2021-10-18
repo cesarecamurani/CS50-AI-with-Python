@@ -1,6 +1,5 @@
 import pdb
 
-import math
 import random
 import time
 
@@ -105,7 +104,7 @@ class NimAI():
         """
         state = tuple(state)
 
-        return 0 if self.q == dict() else self.q[state, action]
+        return self.q[state, action] if (state, action) in self.q else 0
 
     def update_q_value(self, state, action, old_q, reward, future_rewards):
         """
@@ -125,9 +124,7 @@ class NimAI():
 
         new_q = old_q + self.alpha * (new_value_estimate - old_q)
 
-        state = tuple(state)
-        # pdb.set_trace()
-        self.q[state, action] = new_q
+        self.q[tuple(state), action] = new_q
 
     def best_future_reward(self, state):
         """
@@ -139,14 +136,15 @@ class NimAI():
         Q-value in `self.q`. If there are no available actions in
         `state`, return 0.
         """
-        if all(pile == 0 for pile in state):
+        if Nim.available_actions(state) == set():
             return 0
 
         q_values = list()
+
         state = tuple(state)
 
         for action in Nim.available_actions(state):
-            value = self.q[state, action] if (self.q != dict() and self.q[state, action]) else 0
+            value = self.get_q_value(state, action) if (state, action) in self.q else 0
 
             q_values.append(value)
 
@@ -169,23 +167,25 @@ class NimAI():
         If multiple actions have the same Q-value, any of those
         options is an acceptable return value.
         """
-        max_value = max(self.q.values()) if self.q != dict() else 0
-
         q_values = dict()
+
         state = tuple(state)
 
-        epsilon = False
+        available_actions = Nim.available_actions(state)
 
-        if not epsilon:
-            for action in Nim.available_actions(state):
-                # pdb.set_trace()
-                value = self.q[state, action] if (self.q != dict() and self.q[state, action]) else 0
+        if epsilon and random.random() <= self.epsilon:
+            return random.choice(tuple(available_actions))
 
-                q_values[state, action] = value
+        for action in available_actions:
+            value = self.get_q_value(state, action) if (state, action) in self.q else 0
 
-            best_actions = list(filter(lambda x: q_values[x] == max_value, q_values))
-            # pdb.set_trace()
-            return list(best_actions[0])[1]
+            q_values[state, action] = value
+
+        max_value = max(q_values.values())
+
+        best_actions = list(filter(lambda x: q_values[x] == max_value, q_values))
+
+        return best_actions[0][1]
 
 
 def train(n):
