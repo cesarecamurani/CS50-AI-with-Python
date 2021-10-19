@@ -1,5 +1,7 @@
 import csv
+import pdb
 import sys
+
 
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
@@ -59,7 +61,44 @@ def load_data(filename):
     labels should be the corresponding list of labels, where each label
     is 1 if Revenue is true, and 0 otherwise.
     """
-    raise NotImplementedError
+    file = open(filename)
+    reader = csv.reader(file)
+    next(reader)
+
+    labels = list()
+    evidence = list()
+    label_types = ['FALSE', 'TRUE']
+
+    for row in reader:
+        labels.append(label_types.index(row.pop(-1)))
+        evidence.append(format_csv_data(row))
+
+    return (evidence, labels)
+
+
+def format_csv_data(row):
+    month_index = 10
+    visitor_type_index = 15
+    weekend_index = 16
+    int_indexes = [0, 2, 4, 11, 12, 13, 14]
+    float_indexes = [1, 3, 5, 6, 7, 8, 9]
+
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    weekend = ['FALSE', 'TRUE']
+
+    for i, evidence in enumerate(row):
+        if i in int_indexes:
+            row[i] = int(row[i])
+        if i in float_indexes:
+            row[i] = float(row[i])
+        if i == month_index:
+            row[i] = months.index(evidence)
+        if i == visitor_type_index:
+            row[i] = (1 if evidence == 'Returning_Visitor' else 0)
+        if i == weekend_index:
+            row[i] = weekend.index(evidence)
+
+    return row
 
 
 def train_model(evidence, labels):
@@ -67,7 +106,11 @@ def train_model(evidence, labels):
     Given a list of evidence lists and a list of labels, return a
     fitted k-nearest neighbor model (k=1) trained on the data.
     """
-    raise NotImplementedError
+    model = KNeighborsClassifier(n_neighbors=1)
+
+    model.fit(evidence, labels)
+
+    return model
 
 
 def evaluate(labels, predictions):
