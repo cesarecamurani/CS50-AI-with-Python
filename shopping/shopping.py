@@ -1,5 +1,4 @@
 import csv
-import pdb
 import sys
 
 
@@ -61,31 +60,34 @@ def load_data(filename):
     labels should be the corresponding list of labels, where each label
     is 1 if Revenue is true, and 0 otherwise.
     """
-    file = open(filename)
-    reader = csv.reader(file)
-    next(reader)
-
-    labels = list()
-    evidence = list()
-    label_types = ['FALSE', 'TRUE']
-
-    for row in reader:
-        labels.append(label_types.index(row.pop(-1)))
-        evidence.append(format_csv_data(row))
+    # Opens the file.
+    with open(filename) as file:
+        reader = csv.reader(file)
+        # Skips the headers.
+        next(reader)
+        # Initialises labels and evidence.
+        labels = list()
+        evidence = list()
+        label_types = ['FALSE', 'TRUE']
+        # Populates label and evidence for each row in the csv file.
+        for row in reader:
+            labels.append(label_types.index(row.pop(-1)))
+            evidence.append(format_csv_data(row))
 
     return (evidence, labels)
 
 
 def format_csv_data(row):
+    # Sets the indexes for the the different types of evidence to format.
     month_index = 10
     visitor_type_index = 15
     weekend_index = 16
     int_indexes = [0, 2, 4, 11, 12, 13, 14]
     float_indexes = [1, 3, 5, 6, 7, 8, 9]
-
+    # Months and weekend lists for fetching the index given the evidence.
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     weekend = ['FALSE', 'TRUE']
-
+    # For each evidence, replaces it with the right numeric value.
     for i, evidence in enumerate(row):
         if i in int_indexes:
             row[i] = int(row[i])
@@ -106,8 +108,9 @@ def train_model(evidence, labels):
     Given a list of evidence lists and a list of labels, return a
     fitted k-nearest neighbor model (k=1) trained on the data.
     """
+    # Initialises the k-nearest neighbor model.
     model = KNeighborsClassifier(n_neighbors=1)
-
+    # Trains the model.
     model.fit(evidence, labels)
 
     return model
@@ -128,7 +131,24 @@ def evaluate(labels, predictions):
     representing the "true negative rate": the proportion of
     actual negative labels that were accurately identified.
     """
-    raise NotImplementedError
+    sensitivity = 0
+    specificity = 0
+    total_positive = labels.count(1)
+    total_negative = labels.count(0)
+    # Iterates through actual and predicted values tuples and calculates
+    # sensitivity and specificity based on how many values we were
+    # able to correctly predict.
+    for actual, predicted in zip(labels, predictions):
+        if actual == predicted:
+            if actual == 1:
+                sensitivity += 1
+            else:
+                specificity += 1
+    # Normalises the sensitivity and specificity values returning a float between 0 and 1.
+    sensitivity /= total_positive
+    specificity /= total_negative
+
+    return (sensitivity, specificity)
 
 
 if __name__ == "__main__":
