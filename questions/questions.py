@@ -120,14 +120,15 @@ def top_files(query, files, idfs, n):
     """
     files_scores = dict()
 
-    for word in query:
-        word_frequency = 0
-
-        for file, words in files.items():
+    for file, words in files.items():
+        for word in query:
             if word in words:
-                word_frequency += Counter(files[file])[word]
+                term_frequency = Counter(files[file])[word]
 
-            files_scores[file] = word_frequency * idfs[word]
+                if file in files_scores:
+                    files_scores[file] += term_frequency * idfs[word]
+                else:
+                    files_scores[file] = term_frequency * idfs[word]
 
     top_files_list = sorted(files_scores, key=files_scores.get, reverse=True)[:n]
 
@@ -142,7 +143,22 @@ def top_sentences(query, sentences, idfs, n):
     the query, ranked according to idf. If there are ties, preference should
     be given to sentences that have a higher query term density.
     """
-    raise NotImplementedError
+    sentences_scores = dict()
+
+    for word in query:
+        for sentence, words in sentences.items():
+            if word in words:
+                if sentence in sentences_scores:
+                    sentences_scores[sentence] += idfs[word]
+                else:
+                    sentences_scores[sentence] = idfs[word]
+
+    max_value = max(sentences_scores.values())
+    top_sentences_list = sorted(sentences_scores, key=sentences_scores.get, reverse=True)[:n]
+
+    # pdb.set_trace()
+
+    return top_sentences_list
 
 
 if __name__ == "__main__":
