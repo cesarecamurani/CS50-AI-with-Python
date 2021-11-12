@@ -118,17 +118,13 @@ def top_files(query, files, idfs, n):
     to their IDF values), return a list of the filenames of the the `n` top
     files that match the query, ranked according to tf-idf.
     """
-    files_scores = dict()
+    files_scores = {file: 0 for file in files}
 
     for file, words in files.items():
         for word in query:
             if word in words:
                 term_frequency = Counter(files[file])[word]
-
-                if file in files_scores:
-                    files_scores[file] += term_frequency * idfs[word]
-                else:
-                    files_scores[file] = term_frequency * idfs[word]
+                files_scores[file] += (term_frequency * idfs[word])
 
     top_files_list = sorted(files_scores, key=files_scores.get, reverse=True)[:n]
 
@@ -143,20 +139,19 @@ def top_sentences(query, sentences, idfs, n):
     the query, ranked according to idf. If there are ties, preference should
     be given to sentences that have a higher query term density.
     """
-    sentences_scores = dict()
+    scores = {s: {"idf": 0, "qtd": 0} for s in sentences}
 
-    for word in query:
-        for sentence, words in sentences.items():
+    for sentence, words in sentences.items():
+        term_density = 0
+        for word in query:
             if word in words:
-                if sentence in sentences_scores:
-                    sentences_scores[sentence] += idfs[word]
-                else:
-                    sentences_scores[sentence] = idfs[word]
+                term_density += 1
+                scores[sentence]["idf"] += idfs[word]
+                scores[sentence]["qtd"] = term_density / len(words)
 
-    max_value = max(sentences_scores.values())
-    top_sentences_list = sorted(sentences_scores, key=sentences_scores.get, reverse=True)[:n]
+    sorted_sentences_scores = sorted(scores.items(), key=lambda s: (s[1]["idf"], s[1]["qtd"]), reverse=True)[:n]
 
-    # pdb.set_trace()
+    top_sentences_list = [sentence[0] for sentence in sorted_sentences_scores]
 
     return top_sentences_list
 
