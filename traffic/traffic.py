@@ -1,8 +1,9 @@
-import numpy as np
+
 import os
 import sys
-import tensorflow as tf
+import numpy as np
 import cv2.cv2 as cv2
+import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
@@ -99,9 +100,9 @@ def get_model():
     model.summary()
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.CategoricalCrossentropy(),
-        metrics=["accuracy"],
+        optimizer=keras.optimizers.Adam(),
+        loss=keras.losses.CategoricalCrossentropy(),
+        metrics=keras.metrics.Accuracy(),
     )
 
     return model
