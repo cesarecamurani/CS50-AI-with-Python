@@ -1,10 +1,10 @@
-import pdb
-
-import cv2
 import numpy as np
 import os
 import sys
 import tensorflow as tf
+import cv2.cv2 as cv2
+from tensorflow import keras
+from tensorflow.keras import layers
 
 from sklearn.model_selection import train_test_split
 
@@ -64,18 +64,15 @@ def load_data(data_dir):
     labels = list()
 
     for sub_dir in os.listdir(data_dir):
-        if not os.path.isdir(sub_dir):
-            continue
+        for filename in os.listdir(os.path.join(data_dir, sub_dir)):
+            with open(os.path.join(data_dir, sub_dir, filename)) as file:
+                image = cv2.imread(file.name)
+                resized = cv2.resize(image, (IMG_WIDTH, IMG_HEIGHT))
 
-        for filename in os.listdir(sub_dir):
-            if not filename.endswith(".ppm"):
-                continue
+                images.append(resized)
+                labels.append(int(sub_dir))
 
-            with open(os.path.join(sub_dir, filename)) as file:
-
-
-
-
+    return (images, labels)
 
 
 def get_model():
@@ -84,7 +81,30 @@ def get_model():
     `input_shape` of the first layer is `(IMG_WIDTH, IMG_HEIGHT, 3)`.
     The output layer should have `NUM_CATEGORIES` units, one for each category.
     """
-    raise NotImplementedError
+    model = keras.Sequential(
+        [
+            layers.Dense(16, input_shape=(IMG_WIDTH, IMG_HEIGHT, 3), activation="relu", name="input"),
+
+            layers.Conv2D(32, (2, 2), activation="relu"),
+            layers.MaxPooling2D(pool_size=(2, 2)),
+            layers.Dense(64, activation="relu"),
+
+            layers.Dropout(0.5),
+            layers.Flatten(),
+
+            layers.Dense(NUM_CATEGORIES, activation="softmax", name="output")
+        ]
+    )
+
+    model.summary()
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(),
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        metrics=["accuracy"],
+    )
+
+    return model
 
 
 if __name__ == "__main__":
