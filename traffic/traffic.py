@@ -102,7 +102,7 @@ def get_model():
     model.compile(
         optimizer=keras.optimizers.Adam(),
         loss=keras.losses.CategoricalCrossentropy(),
-        metrics=keras.metrics.Accuracy(),
+        metrics=["accuracy"],
     )
 
     return model
